@@ -1,8 +1,22 @@
 # Render blueprint. Deploy: push to a repo, then "New > Blueprint" and point at this file.
+#
+# Free-tier note: free web services can't attach a persistent disk, so this
+# blueprint provisions a free Postgres database and wires DATABASE_URL to it
+# instead of using the SQLite/disk path. If you're on a paid plan and would
+# rather use SQLite with a persistent disk, drop the `databases:` block and
+# the `DATABASE_URL` env var below, and re-add a `disk:` block on the service
+# (see git history for the previous version).
+databases:
+  - name: crucible-db
+    plan: free
+    databaseName: crucible
+    user: crucible
+
 services:
   - type: web
     name: crucible
     runtime: node
+    plan: free
     rootDir: server
     buildCommand: npm install
     startCommand: npm start
@@ -10,8 +24,10 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: DB_PATH
-        value: /data/crucible.db
+      - key: DATABASE_URL
+        fromDatabase:
+          name: crucible-db
+          property: connectionString
       - key: JWT_SECRET
         generateValue: true
       - key: ANTHROPIC_API_KEY
@@ -32,7 +48,3 @@ services:
         sync: false
       - key: REDIS_URL
         sync: false
-    disk:
-      name: crucible-data
-      mountPath: /data       # persists the SQLite DB across deploys
-      sizeGB: 1
