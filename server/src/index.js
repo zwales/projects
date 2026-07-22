@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { config } from "./config.js";
+import { initSchema } from "./lib/db.js";
 import { httpsOnly, securityHeaders, csrfCookie, requireCsrf, sendView, makeLimiter } from "./middleware/security.js";
 import { authRoutes } from "./routes/auth.routes.js";
 import { runRoutes } from "./routes/run.routes.js";
@@ -15,6 +16,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC = path.join(__dirname, "..", "public");
 
 async function main() {
+  await initSchema();
+
   const app = express();
   app.set("trust proxy", 1);
   app.use(httpsOnly);

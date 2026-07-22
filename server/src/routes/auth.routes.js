@@ -16,39 +16,39 @@ export function authRoutes({ limiter }) {
     const password = String(req.body.password || "");
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return res.status(400).json({ error: "Enter a valid email." });
     if (password.length < 8) return res.status(400).json({ error: "Password must be at least 8 characters." });
-    if (Users.byEmail.get(email)) return res.status(409).json({ error: "That email already has an account." });
+    if (await Users.byEmail.get(email)) return res.status(409).json({ error: "That email already has an account." });
     const token = rand();
-    const info = Users.create.run(email, await bcrypt.hash(password, 12), token, new Date(Date.now() + 864e5).toISOString());
-    const user = Users.byId.get(info.lastInsertRowid);
+    const info = await Users.create.run(email, await bcrypt.hash(password, 12), token, new Date(Date.now() + 864e5).toISOString());
+    const user = await Users.byId.get(info.lastInsertRowid);
     try { await send({ to: email, ...verifyEmail(config.appUrl, token) }); } catch (e) { console.error("verify email failed", e.message); }
     setSession(res, user);
-    res.json({ user: publicUser(user) });
+    res.json({ user: await publicUser(user) });
   });
 
   r.post("/login", limiter, async (req, res) => {
     const email = String(req.body.email || "").trim().toLowerCase();
-    const user = Users.byEmail.get(email);
+    const user = await Users.byEmail.get(email);
     if (!user || !(await bcrypt.compare(String(req.body.password || ""), user.password_hash)))
       return res.status(401).json({ error: "Email or password is wrong." });
     setSession(res, user);
-    res.json({ user: publicUser(user) });
+    res.json({ user: await publicUser(user) });
   });
 
   r.post("/logout", (req, res) => { clearSession(res); res.json({ ok: true }); });
-  r.get("/me", auth, (req, res) => res.json({ user: publicUser(req.user) }));
+  r.get("/me", auth, async (req, res) => res.json({ user: await publicUser(req.user) }));
 
-  r.get("/verify", (req, res) => {
-    const user = Users.byVerifyToken.get(String(req.query.token || ""));
+  r.get("/verify", async (req, res) => {
+    const user = await Users.byVerifyToken.get(String(req.query.token || ""));
     if (!user || (user.verify_expires && new Date(user.verify_expires) < new Date())) return res.redirect("/app?verify=failed");
-    Users.markVerified.run(user.id);
+    await Users.markVerified.run(user.id);
     res.redirect("/app?verify=ok");
   });
 
   r.post("/forgot", limiter, async (req, res) => {
-    const user = Users.byEmail.get(String(req.body.email || "").trim().toLowerCase());
+    const user = await Users.byEmail.get(String(req.body.email || "").trim().toLowerCase());
     if (user) {
       const token = rand();
-      Users.setReset.run(token, new Date(Date.now() + 36e5).toISOString(), user.id);
+      await Users.setReset.run(token, new Date(Date.now() + 36e5).toISOString(), user.id);
       try { await send({ to: user.email, ...resetEmail(config.appUrl, token) }); } catch (e) { console.error("reset email failed", e.message); }
     }
     res.json({ ok: true }); // never reveal whether the email exists
@@ -57,10 +57,10 @@ export function authRoutes({ limiter }) {
   r.post("/reset", limiter, async (req, res) => {
     const password = String(req.body.password || "");
     if (password.length < 8) return res.status(400).json({ error: "Password must be at least 8 characters." });
-    const user = Users.byResetToken.get(String(req.body.token || ""));
+    const user = await Users.byResetToken.get(String(req.body.token || ""));
     if (!user || (user.reset_expires && new Date(user.reset_expires) < new Date()))
       return res.status(400).json({ error: "That reset link is invalid or expired." });
-    Users.applyReset.run(await bcrypt.hash(password, 12), user.id);
+    await Users.applyReset.run(await bcrypt.hash(password, 12), user.id);
     res.json({ ok: true });
   });
 

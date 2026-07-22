@@ -5,6 +5,6 @@ import { auth, requireAdmin } from "../middleware/auth.js";
 export function adminRoutes() {
   const r = express.Router();
   // Cost/usage dashboard data. Gated to ADMIN_EMAILS.
-  r.get("/stats", auth, requireAdmin, (req, res) => res.json(Admin.stats()));
+  r.get("/stats", auth, requireAdmin, async (req, res) => res.json(await Admin.stats()));
   return r;
 }

@@ -19,12 +19,12 @@ export function runRoutes({ limiter }) {
 
     const plan = req.user.plan;
     if (plan === "free") {
-      if (Runs.countForUser.get(req.user.id).n >= config.freeRunLimit)
+      if ((await Runs.countForUser.get(req.user.id)).n >= config.freeRunLimit)
         return res.status(402).json({ error: "You've used your free runs.", upgrade: true });
     } else {
       const cap = monthlyTokenCap(plan);
       if (cap > 0) {
-        const u = Usage.get(req.user.id);
+        const u = await Usage.get(req.user.id);
         if (u.input_tokens + u.output_tokens >= cap)
           return res.status(429).json({ error: "You've hit this month's fair-use limit. It resets on the 1st, or contact us to raise it." });
       }
@@ -33,14 +33,14 @@ export function runRoutes({ limiter }) {
     try {
       const model = modelForPlan(plan);
       const result = await runCrucible(decision, kind, stakes, model);
-      Usage.add(req.user.id, result.usage.input, result.usage.output, result.usage.cost);
-      const info = Runs.create.run({
+      await Usage.add(req.user.id, result.usage.input, result.usage.output, result.usage.cost);
+      const info = await Runs.create.run({
         user_id: req.user.id, decision, kind, stakes,
         integrity: result.verdict?.integrity ?? null, verdict: result.verdict?.verdict ?? null,
         payload: JSON.stringify({ strikes: result.strikes, verdict: result.verdict }),
         input_tokens: result.usage.input, output_tokens: result.usage.output, cost_usd: result.usage.cost,
       });
-      res.json({ runId: info.lastInsertRowid, strikes: result.strikes, verdict: result.verdict, user: publicUser(req.user) });
+      res.json({ runId: info.lastInsertRowid, strikes: result.strikes, verdict: result.verdict, user: await publicUser(req.user) });
     } catch (e) {
       if (e.code === "ALL_FAILED") return res.status(502).json({ error: "The AI service could not be reached. Try again in a moment." });
       console.error("run error", e);
@@ -48,9 +48,9 @@ export function runRoutes({ limiter }) {
     }
   });
 
-  r.get("/verdicts", auth, (req, res) => res.json({ verdicts: Runs.listForUser.all(req.user.id) }));
-  r.get("/verdicts/:id", auth, (req, res) => {
-    const row = Runs.byId.get(Number(req.params.id), req.user.id);
+  r.get("/verdicts", auth, async (req, res) => res.json({ verdicts: await Runs.listForUser.all(req.user.id) }));
+  r.get("/verdicts/:id", auth, async (req, res) => {
+    const row = await Runs.byId.get(Number(req.params.id), req.user.id);
     if (!row) return res.status(404).json({ error: "Not found." });
     res.json({ ...row, payload: JSON.parse(row.payload) });
   });
