@@ -93,6 +93,36 @@
 <body>
   <div id="root"></div>
 <script>
+/* ---------- Google Consent Mode v2 ---------- */
+/* Runs unconditionally on page load, before any ad script tag is ever appended.
+   Every ad-related storage/signal defaults to denied until the user explicitly
+   opts in via the consent banner. NOTE: this wires the Consent Mode v2 mechanism
+   only; it is NOT a certified CMP and does not by itself make the app legally
+   compliant for EEA/UK personalized ads.
+   NOT VERIFIED: whether Google's ad-serving infrastructure actually honors
+   these signals end-to-end. The environment this was built and tested in
+   cannot reach Google's ad hosts at all (network policy blocks them), so
+   only the app's own signal-sending — correct payloads, correct order,
+   gated before any ad request — was directly observed, never Google's
+   receiving end. Confirm real behavior on a deployed instance with a real
+   approved AdSense account before treating this as legally sufficient. */
+window.dataLayer=window.dataLayer||[];
+function gtag(){dataLayer.push(arguments);}
+gtag("consent","default",{ad_storage:"denied",ad_user_data:"denied",ad_personalization:"denied",analytics_storage:"denied"});
+let __consentApplied=null;
+function gtagConsentUpdate(mode){
+  if(__consentApplied===mode)return; // idempotent within a session, keeps dataLayer clean
+  __consentApplied=mode;
+  if(mode==="yes"){
+    gtag("consent","update",{ad_storage:"granted",ad_user_data:"granted",ad_personalization:"granted"});
+  } else {
+    // "npa" — non-personalized: allow ad_storage (frequency capping) but no user
+    // data / personalization. This split is a legal-flavored interpretation of
+    // AdSense's standard NPA pattern, not just an engineering choice — confirm
+    // it matches your actual consent obligations before relying on it.
+    gtag("consent","update",{ad_storage:"granted",ad_user_data:"denied",ad_personalization:"denied"});
+  }
+}
 const KINDS=["Startup / product idea","Pricing or business move","Career decision","Launch / go-to-market","Big purchase","Strategy call"];
 const STAKES=["Reversible","Costly to undo","One-way door"];
 const EXAMPLES=[
@@ -232,12 +262,18 @@ function maybeRenderAd(container){
   const wrap=el(`<div class="adwrap"><div class="adcap"><span class="mono">Sponsored</span><a href="#" id="rmads">Remove ads \u2192</a></div><div id="adbody"></div></div>`);
   wrap.querySelector("#rmads").onclick=(e)=>{e.preventDefault();openPaywall();};
   const body=wrap.querySelector("#adbody");
-  if(ads.requireConsent&&localStorage.getItem("cru_consent")!=="yes"){
+  const consent=localStorage.getItem("cru_consent");
+  if(ads.requireConsent&&consent!=="yes"&&consent!=="npa"){
     body.appendChild(consentBanner());container.appendChild(wrap);return;
   }
+  // Apply the Consent Mode v2 update matching the stored choice BEFORE any ad code loads.
+  // When consent isn't required (operator opt-out via ADS_REQUIRE_CONSENT=false), treat as personalized-allowed.
+  const mode=(consent==="yes"||consent==="npa")?consent:"yes";
+  gtagConsentUpdate(mode);
   loadAdNetwork(ads);
   if(ads.network==="adsense"&&ads.clientId&&ads.slotResults){
-    const ins=el(`<ins class="adsbygoogle" style="display:block" data-ad-client="${esc(ads.clientId)}" data-ad-slot="${esc(ads.slotResults)}" data-ad-format="auto" data-full-width-responsive="true"></ins>`);
+    const npa=mode==="npa"?' data-npa="1"':'';
+    const ins=el(`<ins class="adsbygoogle" style="display:block" data-ad-client="${esc(ads.clientId)}" data-ad-slot="${esc(ads.slotResults)}" data-ad-format="auto" data-full-width-responsive="true"${npa}></ins>`);
     body.appendChild(ins);
     try{(window.adsbygoogle=window.adsbygoogle||[]).push({});}catch{}
   } else {
@@ -249,8 +285,10 @@ function consentBanner(){
   const c=el(`<div class="consent"><p>We show a relevant ad to keep the free tier running. Allow personalized ads? You can change this anytime, and Pro removes ads entirely.</p>
     <div class="row"><button class="ok" id="cyes">Allow</button><button id="cno">Only non-personalized</button></div>
     <p style="margin-top:10px"><a href="/privacy" style="color:var(--steel)">Privacy policy</a></p></div>`);
-  c.querySelector("#cyes").onclick=()=>{localStorage.setItem("cru_consent","yes");render();};
-  c.querySelector("#cno").onclick=()=>{localStorage.setItem("cru_consent","no");render();};
+  // "Allow": grant full personalization, THEN let the render path load the ad network.
+  c.querySelector("#cyes").onclick=()=>{localStorage.setItem("cru_consent","yes");gtagConsentUpdate("yes");render();};
+  // "Only non-personalized": a real, distinct path — grant ad_storage only, no user data / personalization.
+  c.querySelector("#cno").onclick=()=>{localStorage.setItem("cru_consent","npa");gtagConsentUpdate("npa");render();};
   return c;
 }
 function loadAdNetwork(ads){
