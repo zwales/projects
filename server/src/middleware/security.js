@@ -20,6 +20,15 @@ export function httpsOnly(req, res, next) {
 // Generates a per-request nonce and builds a CSP that trusts only that nonce for
 // inline scripts (dropping 'unsafe-inline'). If CSP_ALLOW_INLINE=true (some ad
 // networks require it), falls back to 'unsafe-inline' and skips the nonce.
+//
+// Verified trade-off (see IMPLEMENTATION_GUIDE.md Phase 9.5 for the full writeup):
+// AdSense's loader script is allow-listed and loads fine either way, but it
+// renders creatives by injecting further inline <script> tags at runtime that
+// never carry the server's nonce. Under the strict default those injections are
+// blocked (observed via captured `securitypolicyviolation` events); flipping
+// CSP_ALLOW_INLINE to true unblocks them by trusting 'unsafe-inline' for every
+// script on the page, site-wide — a real reduction in XSS defense, not a
+// narrow ad-only exception. Keep the strict default unless ads genuinely need it.
 export function securityHeaders() {
   return (req, res, next) => {
     res.locals.nonce = rand(16);
