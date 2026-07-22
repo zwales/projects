@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>Crucible — the app</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root{--ink:#0E1219;--panel:#161C26;--panel2:#1B222E;--line:#28313F;--bone:#E7E2D6;--dim:#8A94A2;
+    --steel:#6E8CA8;--amber:#E0A94A;--orange:#E27636;--ember:#D8462E;--sound:#5FB58A;}
+  *{box-sizing:border-box;margin:0;padding:0;min-width:0;}
+  body{background:radial-gradient(120% 80% at 50% -10%,#1a2230 0%,#0E1219 60%);color:var(--bone);
+    font-family:'IBM Plex Sans',system-ui,sans-serif;font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;overflow-x:hidden;min-height:100vh;}
+  ::selection{background:#E276362e;}
+  .mono{font-family:'IBM Plex Mono';letter-spacing:.14em;text-transform:uppercase;}
+  button{font-family:inherit;cursor:pointer;} input,select,textarea{font-family:inherit;} a{color:inherit;}
+  header{display:flex;align-items:center;gap:16px;padding:16px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap;background:linear-gradient(180deg,rgba(226,118,54,.05),transparent);}
+  .brand{display:flex;align-items:center;gap:10px;font-family:'Archivo';font-weight:800;letter-spacing:.26em;font-size:17px;}
+  .brand .mk{color:var(--ember);text-shadow:0 0 14px rgba(216,70,46,.55);font-size:18px;}
+  .grow{flex:1;}
+  .userbox{display:flex;align-items:center;gap:12px;font-size:12.5px;color:var(--dim);}
+  .plan-badge{font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.12em;text-transform:uppercase;border:1px solid var(--line);border-radius:5px;padding:3px 8px;color:var(--steel);}
+  .linkbtn{background:none;border:none;color:var(--dim);font-size:12.5px;text-decoration:underline;text-underline-offset:3px;}
+  .linkbtn:hover{color:var(--bone);}
+  .wrap{max-width:1080px;margin:0 auto;padding:22px 20px 60px;}
+  .grid{display:grid;grid-template-columns:minmax(300px,380px) 1fr;gap:22px;align-items:start;}
+  @media(max-width:860px){.grid{grid-template-columns:1fr;}}
+  .label{font-family:'IBM Plex Mono';font-size:11px;letter-spacing:.2em;color:var(--dim);text-transform:uppercase;margin-bottom:12px;}
+  textarea.decision{width:100%;min-height:150px;resize:vertical;background:var(--panel);border:1px solid var(--line);border-radius:10px;color:var(--bone);padding:14px;font-size:15px;line-height:1.55;}
+  textarea.decision:focus{outline:none;border-color:var(--steel);box-shadow:0 0 0 3px rgba(110,140,168,.15);}
+  .controls{display:flex;gap:12px;margin-top:14px;} .field{flex:1;display:flex;flex-direction:column;gap:6px;}
+  .field span{font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);}
+  .field select{background:var(--panel);border:1px solid var(--line);border-radius:8px;color:var(--bone);padding:9px 10px;font-size:13px;}
+  .runbtn{width:100%;margin-top:16px;background:linear-gradient(180deg,#E27636,#C9541F);border:none;border-radius:10px;color:#140b06;font-family:'Archivo';font-weight:700;font-size:16px;padding:15px;display:flex;flex-direction:column;align-items:center;gap:3px;box-shadow:0 6px 22px rgba(226,118,54,.28);}
+  .runbtn:disabled{filter:saturate(.4) brightness(.8);cursor:progress;} .runbtn small{font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.14em;text-transform:uppercase;opacity:.7;}
+  .msg{margin-top:12px;font-size:13px;padding:10px 12px;border-radius:8px;line-height:1.45;}
+  .msg.err{color:#F0A88E;background:rgba(216,70,46,.1);border:1px solid rgba(216,70,46,.35);}
+  .msg.info{color:#c9d0d8;background:rgba(110,140,168,.1);border:1px solid rgba(110,140,168,.3);}
+  .examples{margin-top:20px;} .chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px;}
+  .chip{background:var(--panel2);border:1px solid var(--line);color:var(--steel);border-radius:20px;padding:6px 13px;font-size:12.5px;font-family:'IBM Plex Mono';}
+  .chip:hover{border-color:var(--steel);color:var(--bone);}
+  .results{min-height:50vh;} .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;height:50vh;text-align:center;color:var(--dim);} .empty p{max-width:320px;font-size:14px;}
+  .gauge{width:220px;height:124px;}
+  .verdict{display:flex;gap:22px;align-items:center;padding:20px;border:1px solid var(--line);border-radius:12px;background:var(--panel);}
+  @media(max-width:600px){.verdict{flex-direction:column;align-items:stretch;gap:14px;}.gauge{width:200px;align-self:center;}}
+  .vbody{flex:1;} .stamp{font-family:'Archivo';font-weight:800;font-size:15px;letter-spacing:.16em;border:1.5px solid;border-radius:6px;padding:4px 12px;display:inline-block;margin-bottom:10px;}
+  .vline{font-family:'Archivo';font-weight:600;font-size:19px;line-height:1.35;margin-bottom:8px;} .vnote{font-size:13px;color:var(--dim);}
+  .ledger{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px;} @media(max-width:620px){.ledger{grid-template-columns:1fr;}}
+  .lcol{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;}
+  .lh{font-family:'IBM Plex Mono';font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;margin-bottom:9px;padding-bottom:8px;border-bottom:1px solid var(--line);}
+  .lcol ol,.lcol ul{margin:0;padding-left:17px;display:flex;flex-direction:column;gap:8px;} .lcol li{font-size:13px;color:#cfd4db;line-height:1.4;}
+  .strikes{display:flex;flex-direction:column;gap:12px;margin-top:24px;}
+  .strike{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:15px;animation:rise .4s both;}
+  @keyframes rise{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+  .shead{display:flex;align-items:center;gap:12px;}
+  .glyph{width:34px;height:34px;flex:none;border:1.5px solid;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'Archivo';font-weight:700;font-size:16px;}
+  .sname{font-family:'Archivo';font-weight:700;font-size:14.5px;} .sangle{font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);}
+  .sev{margin-left:auto;text-align:right;} .sevn{font-family:'Archivo';font-weight:800;font-size:22px;line-height:1;} .sevc{font-family:'IBM Plex Mono';font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);}
+  .heatbar{height:3px;background:#232b37;border-radius:2px;margin-top:12px;overflow:hidden;} .heatbar>span{display:block;height:100%;}
+  .headline{font-family:'Archivo';font-weight:700;font-size:14px;margin:12px 0 6px;} .sline{font-size:13.5px;color:#d3d8de;margin-bottom:9px;}
+  .meta{font-size:12.5px;color:#a9b0ba;margin-bottom:6px;line-height:1.45;} .tag{font-family:'IBM Plex Mono';font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);border:1px solid var(--line);border-radius:4px;padding:1px 6px;margin-right:8px;}
+  /* ads */
+  .adwrap{margin-top:20px;border:1px dashed var(--line);border-radius:10px;padding:12px;background:rgba(255,255,255,.01);}
+  .adcap{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+  .adcap .mono{font-size:9px;color:var(--dim);} .adcap a{font-size:11px;color:var(--orange);text-decoration:none;}
+  .adslot-ph{min-height:90px;display:flex;align-items:center;justify-content:center;color:var(--dim);font-family:'IBM Plex Mono';font-size:11px;text-align:center;}
+  .consent{border:1px solid var(--line);border-radius:10px;padding:14px;background:var(--panel);margin-top:20px;}
+  .consent p{font-size:12.5px;color:#c9d0d8;margin-bottom:10px;} .consent .row{display:flex;gap:8px;}
+  .consent button{border:1px solid var(--line);background:none;color:var(--bone);border-radius:7px;padding:8px 14px;font-size:12px;}
+  .consent button.ok{background:var(--steel);color:#0E1219;border:none;font-weight:600;}
+  /* auth */
+  .authwrap{max-width:420px;margin:8vh auto;padding:0 20px;} .authcard{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:28px;box-shadow:0 30px 80px -40px #000;}
+  .authcard h1{font-family:'Archivo';font-weight:800;font-size:24px;margin-bottom:6px;} .authcard p.tag{color:var(--dim);font-size:14px;margin-bottom:20px;letter-spacing:0;text-transform:none;font-family:inherit;}
+  .authcard input{width:100%;background:var(--ink);border:1px solid var(--line);border-radius:9px;color:var(--bone);padding:12px;font-size:15px;margin-bottom:12px;} .authcard input:focus{outline:none;border-color:var(--steel);}
+  .switch{margin-top:16px;font-size:13px;color:var(--dim);text-align:center;}
+  .modal{position:fixed;inset:0;background:rgba(8,11,16,.72);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50;}
+  .mcard{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:26px;max-width:540px;width:100%;} .mcard h2{font-family:'Archivo';font-weight:800;font-size:20px;margin-bottom:8px;} .mcard>p{color:var(--dim);font-size:14px;margin-bottom:18px;}
+  .plans{display:grid;grid-template-columns:1fr 1fr;gap:12px;} @media(max-width:480px){.plans{grid-template-columns:1fr;}}
+  .plan{border:1px solid var(--line);border-radius:10px;padding:16px;} .plan.feat{border-color:var(--orange);box-shadow:0 0 30px -18px var(--orange);}
+  .plan .pn{font-family:'IBM Plex Mono';font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);} .plan .pp{font-family:'Archivo';font-weight:800;font-size:26px;margin:6px 0 10px;}
+  .plan ul{margin:0 0 14px;padding-left:16px;display:flex;flex-direction:column;gap:5px;} .plan li{font-size:12.5px;color:#cfd4db;}
+  .plan .pick{width:100%;border:1px solid var(--line);border-radius:8px;padding:9px;background:none;color:var(--bone);font-family:'IBM Plex Mono';font-size:11px;letter-spacing:.1em;text-transform:uppercase;}
+  .plan.feat .pick{background:linear-gradient(180deg,#E27636,#C9541F);color:#140b06;border:none;font-weight:700;} .mclose{margin-top:16px;background:none;border:1px solid var(--line);color:var(--dim);border-radius:8px;padding:8px 14px;font-size:12px;}
+  .spin{width:15px;height:15px;border:2px solid #2b3542;border-top-color:var(--steel);border-radius:50%;animation:sp .7s linear infinite;display:inline-block;vertical-align:middle;} @keyframes sp{to{transform:rotate(360deg);}}
+  .sharebtn{margin-top:14px;background:none;border:1px solid var(--line);color:var(--bone);border-radius:8px;padding:9px 15px;font-family:'IBM Plex Mono';font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;}
+  .sharebtn:hover{border-color:var(--orange);color:#F0B48E;}
+  .acctbtn{display:block;width:100%;text-align:center;border:1px solid var(--line);background:none;color:var(--bone);border-radius:9px;padding:11px;margin:8px 0;font-family:'IBM Plex Mono';font-size:12px;letter-spacing:.08em;text-transform:uppercase;text-decoration:none;}
+  .acctbtn:hover{border-color:var(--steel);} .acctbtn.danger{color:#F0A88E;border-color:rgba(216,70,46,.4);} .acctbtn.danger:hover{border-color:var(--ember);}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important;}}
+</style>
+</head>
+<body>
+  <div id="root"></div>
+<script>
+const KINDS=["Startup / product idea","Pricing or business move","Career decision","Launch / go-to-market","Big purchase","Strategy call"];
+const STAKES=["Reversible","Costly to undo","One-way door"];
+const EXAMPLES=[
+  {kind:"Startup / product idea",stakes:"Costly to undo",text:"A subscription app that uses AI to turn a founder's messy voice memos into weekly investor updates automatically, priced at $39/month, sold to seed-stage startups."},
+  {kind:"Pricing or business move",stakes:"Reversible",text:"Our B2B SaaS will drop its free tier entirely and move everyone to a 14-day trial, betting qualified conversion rises more than signups fall."},
+  {kind:"Career decision",stakes:"One-way door",text:"Leave a stable senior engineering role to co-found a two-person company with a former colleague, no outside funding, 9 months of runway."},
+];
+const state={user:null,config:null,authMode:"login",busy:false,result:null,error:"",info:""};
+const el=(h)=>{const t=document.createElement("template");t.innerHTML=h.trim();return t.content.firstChild;};
+const esc=(s)=>String(s==null?"":s).replace(/[&<>"]/g,(c)=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]));
+const cookie=(n)=>{const m=document.cookie.split("; ").find(x=>x.startsWith(n+"="));return m?decodeURIComponent(m.split("=")[1]):"";};
+function heatColor(s){return s>=75?"#D8462E":s>=50?"#E27636":s>=25?"#E0A94A":"#6E8CA8";}
+function integrityColor(v){return v>=75?"#5FB58A":v>=50?"#6E8CA8":v>=30?"#E0A94A":"#D8462E";}
+function verdictMeta(v){v=(v||"").toUpperCase();
+  if(v==="SOUND")return{c:"#5FB58A",note:"Withstood the crucible. Proceed \u2014 but watch the deadliest flaw."};
+  if(v==="RECAST")return{c:"#D8462E",note:"It broke under pressure. Reshape the core bet before spending more."};
+  return{c:"#E0A94A",note:"Fixable, but not yet. Reinforce the weak points first."};}
+
+async function api(path,opts={}){
+  const headers=Object.assign({"content-type":"application/json"},opts.headers||{});
+  headers["x-csrf-token"]=cookie("cru_csrf");
+  const res=await fetch(path,Object.assign({credentials:"include"},opts,{headers,body:opts.body?JSON.stringify(opts.body):undefined}));
+  let data={};try{data=await res.json();}catch{}
+  if(!res.ok){const e=new Error(data.error||("Error "+res.status));e.status=res.status;e.data=data;throw e;}
+  return data;
+}
+
+function gaugeSVG(v){
+  v=Math.max(0,Math.min(100,v||0));const cx=110,cy=104,r=82,col=integrityColor(v);
+  const ang=(180-v/100*180)*Math.PI/180,nx=cx+Math.cos(ang)*r,ny=cy-Math.sin(ang)*r;
+  let ticks="";for(let i=0;i<=40;i++){const a=Math.PI-(i/40)*Math.PI,inner=r-10,major=i%5===0,outer=r-2+(major?3:0),on=i/40<=v/100;
+    ticks+=`<line x1="${cx+Math.cos(a)*inner}" y1="${cy-Math.sin(a)*inner}" x2="${cx+Math.cos(a)*outer}" y2="${cy-Math.sin(a)*outer}" stroke="${on?col:"#2A3340"}" stroke-width="${major?1.6:.8}"/>`;}
+  return `<svg class="gauge" viewBox="0 0 220 124" role="img" aria-label="Integrity ${v} of 100">${ticks}
+    <line x1="${cx}" y1="${cy}" x2="${nx}" y2="${ny}" stroke="${col}" stroke-width="2.4" stroke-linecap="round"/>
+    <circle cx="${cx}" cy="${cy}" r="5" fill="#0E1219" stroke="${col}" stroke-width="2"/>
+    <text x="${cx}" y="${cy-30}" text-anchor="middle" font-family="Archivo" font-weight="800" font-size="30" fill="${col}">${v}</text>
+    <text x="${cx}" y="${cy-14}" text-anchor="middle" font-family="IBM Plex Mono" font-size="8" letter-spacing="3" fill="#8A94A2">INTEGRITY</text></svg>`;
+}
+
+function render(){
+  const root=document.getElementById("root");root.innerHTML="";
+  const params=new URLSearchParams(location.search);
+  if(params.get("reset")&&!state.user){root.appendChild(renderReset(params.get("reset")));return;}
+  if(!state.user){root.appendChild(renderAuth());return;}
+  root.appendChild(renderHeader());
+  root.appendChild(renderApp());
+}
+
+function renderHeader(){
+  const u=state.user;
+  const h=el(`<header><div class="brand"><span class="mk">\u25C8</span> CRUCIBLE</div><div class="grow"></div>
+    <div class="userbox"><span class="plan-badge">${esc(u.plan)}</span>
+      <span>${u.plan==="free"?(u.runsLeft+" free left"):"unlimited"}</span>
+      <button class="linkbtn" id="histBtn">History</button>
+      <button class="linkbtn" id="acctBtn">Account</button>
+      <button class="linkbtn" id="logoutBtn">Sign out</button></div></header>`);
+  h.querySelector("#logoutBtn").onclick=async()=>{try{await api("/api/auth/logout",{method:"POST"});}catch{}state.user=null;state.result=null;render();};
+  h.querySelector("#histBtn").onclick=openHistory;
+  h.querySelector("#acctBtn").onclick=openAccount;
+  return h;
+}
+
+function renderApp(){
+  const wrap=el(`<div class="wrap"><div class="grid">
+    <section><div class="label">01 \u2014 The chamber</div>
+      <textarea class="decision" id="decision" spellcheck="false" placeholder="State the decision plainly. The clearer the bet, the sharper the attack."></textarea>
+      <div class="controls"><label class="field"><span>Type</span><select id="kind"></select></label><label class="field"><span>Stakes</span><select id="stakes"></select></label></div>
+      <button class="runbtn" id="run">Run the crucible<small>5 adversaries \u00b7 1 verdict</small></button>
+      <div id="msg"></div>
+      <div class="examples"><div class="label" style="margin-bottom:0">Or drop in an example</div><div class="chips" id="chips"></div></div>
+    </section>
+    <section class="results" id="results"></section></div></div>`);
+  const kindSel=wrap.querySelector("#kind");KINDS.forEach(k=>kindSel.appendChild(el(`<option>${esc(k)}</option>`)));
+  const stakeSel=wrap.querySelector("#stakes");STAKES.forEach(s=>stakeSel.appendChild(el(`<option>${esc(s)}</option>`)));
+  const dec=wrap.querySelector("#decision");dec.value=EXAMPLES[0].text;kindSel.value=EXAMPLES[0].kind;stakeSel.value=EXAMPLES[0].stakes;
+  const chips=wrap.querySelector("#chips");EXAMPLES.forEach(ex=>{const c=el(`<button class="chip">${esc(ex.kind.split(" ")[0])}</button>`);c.onclick=()=>{dec.value=ex.text;kindSel.value=ex.kind;stakeSel.value=ex.stakes;};chips.appendChild(c);});
+  const msg=wrap.querySelector("#msg");
+  if(!state.user.emailVerified) msg.appendChild(el(`<div class="msg info">Confirm your email to secure your account \u2014 check your inbox.</div>`));
+  if(state.error)msg.appendChild(el(`<div class="msg err">${esc(state.error)}</div>`));
+  else if(state.info)msg.appendChild(el(`<div class="msg info">${esc(state.info)}</div>`));
+  const runBtn=wrap.querySelector("#run");runBtn.disabled=state.busy;
+  if(state.busy)runBtn.innerHTML=`Adversaries striking\u2026 <small>the judge deliberates last</small>`;
+  runBtn.onclick=async()=>{
+    state.error="";state.info="";const decision=dec.value.trim();
+    if(!decision){state.error="Write the decision you want tested first.";return render();}
+    state.busy=true;state.result=null;render();
+    try{const r=await api("/api/run",{method:"POST",body:{decision,kind:kindSel.value,stakes:stakeSel.value}});state.result=r;if(r.user)state.user=r.user;}
+    catch(e){if(e.status===402){state.busy=false;render();return openPaywall();}state.error=e.message;}
+    state.busy=false;render();
+  };
+  wrap.querySelector("#results").appendChild(renderResults());
+  return wrap;
+}
+
+function renderResults(){
+  if(state.busy)return el(`<div class="empty"><div>${gaugeSVG(50)}</div><p><span class="spin"></span> Five adversaries are attacking your decision. The judge renders a verdict once they land.</p></div>`);
+  if(!state.result)return el(`<div class="empty"><div>${gaugeSVG(0)}</div><p>The gauge reads zero until a decision goes in. Run the crucible to see how much pressure your bet can take.</p></div>`);
+  const{strikes,verdict}=state.result;const box=el(`<div></div>`);
+  if(verdict){
+    const vm=verdictMeta(verdict.verdict);
+    box.appendChild(el(`<div class="verdict" style="border-color:${vm.c}55;box-shadow:0 0 40px -18px ${vm.c}"><div>${gaugeSVG(verdict.integrity)}</div>
+      <div class="vbody"><div class="stamp" style="color:${vm.c};border-color:${vm.c}">${esc(verdict.verdict)}</div>
+      <div class="vline">${esc(verdict.verdict_line)}</div><div class="vnote">${esc(vm.note)}</div></div></div>`));
+    box.appendChild(el(`<div class="ledger">
+      <div class="lcol"><div class="lh" style="color:#E88a72">How it dies</div><ol>${(verdict.deadliest||[]).map(d=>`<li>${esc(d)}</li>`).join("")}</ol></div>
+      <div class="lcol"><div class="lh" style="color:var(--steel)">Cheapest reinforcement</div><ol>${(verdict.fixes||[]).map(d=>`<li>${esc(d)}</li>`).join("")}</ol></div>
+      <div class="lcol"><div class="lh" style="color:#E0A94A">Kill criteria</div><ul>${(verdict.kill_criteria||[]).map(d=>`<li>${esc(d)}</li>`).join("")}</ul></div></div>`));
+    const share=el(`<button class="sharebtn">Share this verdict \u2192</button>`);
+    share.onclick=()=>openCard(verdict,strikes);
+    box.appendChild(share);
+  } else box.appendChild(el(`<div class="msg info">The adversaries landed, but the judge couldn't render a verdict this time. The strikes below still stand.</div>`));
+
+  maybeRenderAd(box); // free-tier, consent-gated ad slot between verdict and strikes
+
+  box.appendChild(el(`<div class="label" style="margin:24px 0 0">02 \u2014 The strikes</div>`));
+  const sw=el(`<div class="strikes"></div>`);
+  strikes.forEach((s,i)=>{
+    if(s.state==="failed"){sw.appendChild(el(`<div class="strike"><div class="shead"><span class="glyph" style="border-color:#8A94A2;color:#8A94A2">${esc(s.glyph)}</span><div><div class="sname">${esc(s.name)}</div><div class="sangle">${esc(s.angle)}</div></div></div><div class="sline" style="color:#8A94A2;margin-top:10px">This adversary lost contact. The verdict weighs the readings that landed.</div></div>`));return;}
+    const col=heatColor(s.severity);
+    sw.appendChild(el(`<div class="strike" style="animation-delay:${i*70}ms;border-color:${col}44">
+      <div class="shead"><span class="glyph" style="border-color:${col};color:${col}">${esc(s.glyph)}</span>
+        <div><div class="sname">${esc(s.name)}</div><div class="sangle">${esc(s.angle)}</div></div>
+        <div class="sev"><div class="sevn" style="color:${col}">${s.severity}</div><div class="sevc">threat</div></div></div>
+      <div class="heatbar"><span style="width:${s.severity}%;background:${col}"></span></div>
+      <div class="headline">${esc(s.headline)}</div><div class="sline">${esc(s.strike)}</div>
+      ${s.blindspot?`<div class="meta"><span class="tag">unquestioned</span>${esc(s.blindspot)}</div>`:""}
+      ${s.test?`<div class="meta"><span class="tag" style="color:#7FA9C4;border-color:#33465a">1-week test</span>${esc(s.test)}</div>`:""}</div>`));
+  });
+  box.appendChild(sw);
+  return box;
+}
+
+/* ---------- ads (publisher-side, network-agnostic, consent-gated) ---------- */
+function maybeRenderAd(container){
+  const ads=state.config&&state.config.ads;
+  if(!state.user||state.user.plan!=="free"||!ads||!ads.enabled)return;
+  const wrap=el(`<div class="adwrap"><div class="adcap"><span class="mono">Sponsored</span><a href="#" id="rmads">Remove ads \u2192</a></div><div id="adbody"></div></div>`);
+  wrap.querySelector("#rmads").onclick=(e)=>{e.preventDefault();openPaywall();};
+  const body=wrap.querySelector("#adbody");
+  if(ads.requireConsent&&localStorage.getItem("cru_consent")!=="yes"){
+    body.appendChild(consentBanner());container.appendChild(wrap);return;
+  }
+  loadAdNetwork(ads);
+  if(ads.network==="adsense"&&ads.clientId&&ads.slotResults){
+    const ins=el(`<ins class="adsbygoogle" style="display:block" data-ad-client="${esc(ads.clientId)}" data-ad-slot="${esc(ads.slotResults)}" data-ad-format="auto" data-full-width-responsive="true"></ins>`);
+    body.appendChild(ins);
+    try{(window.adsbygoogle=window.adsbygoogle||[]).push({});}catch{}
+  } else {
+    body.appendChild(el(`<div class="adslot-ph">Ad slot ready \u2014 set AD_NETWORK / AD_CLIENT_ID / AD_SLOT_RESULTS in env to serve ${esc(ads.network)} ads here.</div>`));
+  }
+  container.appendChild(wrap);
+}
+function consentBanner(){
+  const c=el(`<div class="consent"><p>We show a relevant ad to keep the free tier running. Allow personalized ads? You can change this anytime, and Pro removes ads entirely.</p>
+    <div class="row"><button class="ok" id="cyes">Allow</button><button id="cno">Only non-personalized</button></div>
+    <p style="margin-top:10px"><a href="/privacy" style="color:var(--steel)">Privacy policy</a></p></div>`);
+  c.querySelector("#cyes").onclick=()=>{localStorage.setItem("cru_consent","yes");render();};
+  c.querySelector("#cno").onclick=()=>{localStorage.setItem("cru_consent","no");render();};
+  return c;
+}
+function loadAdNetwork(ads){
+  if(window.__adLoaded)return;
+  if(ads.network==="adsense"&&ads.clientId){
+    window.__adLoaded=true;
+    const s=document.createElement("script");s.async=true;s.crossOrigin="anonymous";
+    s.src=`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(ads.clientId)}`;
+    document.head.appendChild(s);
+  }
+}
+
+/* ---------- auth ---------- */
+function renderAuth(){
+  const login=state.authMode==="login";
+  const card=el(`<div class="authwrap"><div class="authcard">
+    <div class="brand" style="margin-bottom:16px"><span class="mk">\u25C8</span> CRUCIBLE</div>
+    <h1>${login?"Sign in":"Create your account"}</h1>
+    <p class="tag">Grade your idea somewhere else. Here we try to break it.</p>
+    <input id="email" type="email" placeholder="you@company.com" autocomplete="email"/>
+    <input id="password" type="password" placeholder="Password (8+ characters)" autocomplete="${login?"current-password":"new-password"}"/>
+    <button class="runbtn" id="submit">${login?"Sign in":"Create account"}<small>${state.config?(state.config.freeLimit+" free runs to start"):""}</small></button>
+    <div id="amsg"></div>
+    <div class="switch">${login?`Forgot your password? <button class="linkbtn" id="forgot">Reset it</button><br/>New here? `:"Already have an account? "}<button class="linkbtn" id="switch">${login?"Create an account":"Sign in"}</button></div>
+  </div></div>`);
+  if(state.error)card.querySelector("#amsg").appendChild(el(`<div class="msg err" style="margin-top:14px">${esc(state.error)}</div>`));
+  if(state.info)card.querySelector("#amsg").appendChild(el(`<div class="msg info" style="margin-top:14px">${esc(state.info)}</div>`));
+  card.querySelector("#switch").onclick=()=>{state.authMode=login?"signup":"login";state.error="";state.info="";render();};
+  const forgot=card.querySelector("#forgot");if(forgot)forgot.onclick=openForgot;
+  const submit=card.querySelector("#submit");
+  submit.onclick=async()=>{
+    state.error="";const email=card.querySelector("#email").value.trim();const password=card.querySelector("#password").value;
+    submit.disabled=true;submit.innerHTML=`<span class="spin"></span>`;
+    try{const r=await api(login?"/api/auth/login":"/api/auth/signup",{method:"POST",body:{email,password}});state.user=r.user;state.error="";
+      if(!login)state.info="";render();}
+    catch(e){state.error=e.message;render();}
+  };
+  card.querySelectorAll("input").forEach(i=>i.addEventListener("keydown",e=>{if(e.key==="Enter")submit.click();}));
+  return card;
+}
+function renderReset(token){
+  const card=el(`<div class="authwrap"><div class="authcard"><div class="brand" style="margin-bottom:16px"><span class="mk">\u25C8</span> CRUCIBLE</div>
+    <h1>Set a new password</h1><p class="tag">Choose a new password for your account.</p>
+    <input id="pw" type="password" placeholder="New password (8+ characters)" autocomplete="new-password"/>
+    <button class="runbtn" id="save">Save password</button><div id="rmsg"></div></div></div>`);
+  card.querySelector("#save").onclick=async()=>{
+    const password=card.querySelector("#pw").value;
+    try{await api("/api/auth/reset",{method:"POST",body:{token,password}});
+      history.replaceState({},"","/app");state.info="Password updated \u2014 sign in.";state.authMode="login";render();}
+    catch(e){card.querySelector("#rmsg").innerHTML=`<div class="msg err" style="margin-top:14px">${esc(e.message)}</div>`;}
+  };
+  return card;
+}
+function openForgot(){
+  const modal=el(`<div class="modal"><div class="mcard"><h2>Reset your password</h2><p>We'll email you a reset link if the account exists.</p>
+    <input id="femail" type="email" placeholder="you@company.com" style="width:100%;background:var(--ink);border:1px solid var(--line);border-radius:9px;color:var(--bone);padding:12px;margin-bottom:12px"/>
+    <button class="runbtn" id="fsend" style="margin-top:0">Send reset link</button><div id="fmsg"></div>
+    <button class="mclose">Close</button></div></div>`);
+  modal.addEventListener("click",e=>{if(e.target===modal)modal.remove();});
+  modal.querySelector(".mclose").onclick=()=>modal.remove();
+  modal.querySelector("#fsend").onclick=async()=>{
+    try{await api("/api/auth/forgot",{method:"POST",body:{email:modal.querySelector("#femail").value.trim()}});
+      modal.querySelector("#fmsg").innerHTML=`<div class="msg info" style="margin-top:12px">If that email exists, a reset link is on its way.</div>`;}
+    catch(e){modal.querySelector("#fmsg").innerHTML=`<div class="msg err" style="margin-top:12px">${esc(e.message)}</div>`;}
+  };
+  document.body.appendChild(modal);
+}
+
+/* ---------- paywall ---------- */
+function openPaywall(){
+  const plans=(state.config&&state.config.plans)||[];
+  const modal=el(`<div class="modal"><div class="mcard"><h2>You've used your free runs</h2>
+    <p>Crucible is free for your first ${state.config?state.config.freeLimit:2} decisions. Pro removes ads and lifts the limit.</p>
+    <div class="plans">${plans.map((p,i)=>`<div class="plan ${i===0?"feat":""}"><div class="pn">${esc(p.name)}</div><div class="pp">${esc(p.price)}</div>
+      <ul>${p.perks.map(x=>`<li>${esc(x)}</li>`).join("")}</ul><button class="pick" data-plan="${esc(p.id)}">Choose ${esc(p.name)}</button></div>`).join("")}</div>
+    <button class="mclose">Not now</button></div></div>`);
+  modal.addEventListener("click",e=>{if(e.target===modal)modal.remove();});
+  modal.querySelector(".mclose").onclick=()=>modal.remove();
+  modal.querySelectorAll(".pick").forEach(b=>b.onclick=async()=>{
+    if(!(state.config&&state.config.billingEnabled)){b.textContent="Billing not configured";return;}
+    b.innerHTML=`<span class="spin"></span>`;
+    try{const r=await api("/api/billing/checkout",{method:"POST",body:{plan:b.dataset.plan}});window.location=r.url;}
+    catch(e){b.textContent=e.message;}
+  });
+  document.body.appendChild(modal);
+}
+
+/* ---------- history ---------- */
+async function openHistory(){
+  const modal=el(`<div class="modal"><div class="mcard"><h2>Saved verdicts</h2><p>Your last runs.</p><div id="hlist">Loading\u2026</div><button class="mclose">Close</button></div></div>`);
+  modal.addEventListener("click",e=>{if(e.target===modal)modal.remove();});modal.querySelector(".mclose").onclick=()=>modal.remove();
+  document.body.appendChild(modal);
+  try{const{verdicts}=await api("/api/verdicts");const list=modal.querySelector("#hlist");
+    if(!verdicts.length){list.textContent="No runs yet.";return;}list.innerHTML="";
+    verdicts.forEach(v=>{const c=v.integrity!=null?integrityColor(v.integrity):"#8A94A2";
+      list.appendChild(el(`<div style="display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)">
+        <div style="font-family:Archivo;font-weight:800;font-size:18px;color:${c};min-width:34px">${v.integrity==null?"\u2014":v.integrity}</div>
+        <div style="flex:1;min-width:0"><div style="font-size:13px;color:#cfd4db;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(v.decision)}</div>
+        <div class="mono" style="font-size:9px;color:var(--dim)">${esc(v.verdict||"")} \u00b7 ${esc(v.created_at)}</div></div></div>`));});
+  }catch(e){modal.querySelector("#hlist").textContent=e.message;}
+}
+
+/* ---------- account (export + delete) ---------- */
+function openAccount(){
+  const u=state.user;
+  const modal=el(`<div class="modal"><div class="mcard"><h2>Your account</h2>
+    <p>${esc(u.email)} \u00b7 ${esc(u.plan)} plan${u.emailVerified?"":" \u00b7 email not confirmed"}</p>
+    <a class="acctbtn" href="/api/account/export">Export my data (JSON)</a>
+    <button class="acctbtn danger" id="del">Delete my account</button>
+    <div id="amsg2"></div><button class="mclose">Close</button></div></div>`);
+  modal.addEventListener("click",e=>{if(e.target===modal)modal.remove();});
+  modal.querySelector(".mclose").onclick=()=>modal.remove();
+  modal.querySelector("#del").onclick=async()=>{
+    if(!confirm("This permanently deletes your account and every saved verdict. This cannot be undone. Continue?"))return;
+    try{await api("/api/account",{method:"DELETE"});state.user=null;state.result=null;modal.remove();render();}
+    catch(e){modal.querySelector("#amsg2").innerHTML=`<div class="msg err" style="margin-top:10px">${esc(e.message)}</div>`;}
+  };
+  document.body.appendChild(modal);
+}
+
+/* ---------- shareable verdict card (canvas -> PNG) ---------- */
+function wrapText(ctx,text,maxW){const words=String(text||"").split(" ");const lines=[];let line="";
+  for(const w of words){const t=line?line+" "+w:w;if(ctx.measureText(t).width>maxW&&line){lines.push(line);line=w;}else line=t;}if(line)lines.push(line);return lines;}
+function roundRect(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+async function drawCard(canvas,p){
+  const W=1200,H=675,dpr=2;canvas.width=W*dpr;canvas.height=H*dpr;const ctx=canvas.getContext("2d");ctx.scale(dpr,dpr);
+  try{await Promise.all([document.fonts.load("800 40px Archivo"),document.fonts.load("600 34px Archivo"),document.fonts.load("500 16px 'IBM Plex Mono'")]);}catch{}
+  const ls=(v)=>{try{ctx.letterSpacing=v;}catch{}};
+  const bg=ctx.createRadialGradient(W/2,-80,100,W/2,H,900);bg.addColorStop(0,"#1a2230");bg.addColorStop(1,"#0E1219");ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+  const hr=ctx.createLinearGradient(0,0,W,0);hr.addColorStop(0,"#E27636");hr.addColorStop(1,"rgba(226,118,54,0)");ctx.fillStyle=hr;ctx.fillRect(0,0,W,4);
+  ctx.textBaseline="middle";ctx.fillStyle="#D8462E";ctx.font="700 26px Archivo";ls("0px");ctx.fillText("\u25C8",64,74);
+  ctx.fillStyle="#E7E2D6";ctx.font="800 24px Archivo";ls("7px");ctx.fillText("CRUCIBLE",96,76);ls("0px");
+  const cx=320,cy=400,r=155,gc=p.gaugeColor;
+  for(let i=0;i<=40;i++){const a=Math.PI-(i/40)*Math.PI,major=i%5===0,inner=r-16,outer=major?r+2:r-4;
+    ctx.beginPath();ctx.moveTo(cx+Math.cos(a)*inner,cy-Math.sin(a)*inner);ctx.lineTo(cx+Math.cos(a)*outer,cy-Math.sin(a)*outer);
+    ctx.strokeStyle=i/40<=p.integrity/100?gc:"#2A3340";ctx.lineWidth=major?3:1.6;ctx.stroke();}
+  const ang=Math.PI-(p.integrity/100)*Math.PI;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+Math.cos(ang)*r,cy-Math.sin(ang)*r);
+  ctx.strokeStyle=gc;ctx.lineWidth=4;ctx.lineCap="round";ctx.stroke();
+  ctx.beginPath();ctx.arc(cx,cy,9,0,Math.PI*2);ctx.fillStyle="#0E1219";ctx.fill();ctx.strokeStyle=gc;ctx.lineWidth=3;ctx.stroke();
+  ctx.fillStyle=gc;ctx.font="800 72px Archivo";ctx.textAlign="center";ctx.fillText(String(p.integrity),cx,cy-46);
+  ctx.fillStyle="#8A94A2";ctx.font="500 15px 'IBM Plex Mono'";ls("5px");ctx.fillText("INTEGRITY / 100",cx,cy-6);ls("0px");ctx.textAlign="left";
+  ctx.strokeStyle="#28313F";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(560,150);ctx.lineTo(560,540);ctx.stroke();
+  const x0=610;ctx.font="800 30px Archivo";ls("5px");const sw=ctx.measureText(p.verdict).width+44;
+  ctx.strokeStyle=p.verdictColor;ctx.lineWidth=2;roundRect(ctx,x0,168,sw,52,8);ctx.stroke();ctx.fillStyle=p.verdictColor;ctx.fillText(p.verdict,x0+22,196);ls("0px");
+  ctx.fillStyle="#E7E2D6";ctx.font="600 34px Archivo";wrapText(ctx,p.verdictLine,W-x0-64).slice(0,4).forEach((ln,i)=>ctx.fillText(ln,x0,282+i*44));
+  (p.top||[]).slice(0,2).forEach((t,i)=>{const cxp=x0+i*280,chipY=470;
+    ctx.fillStyle="#161C26";roundRect(ctx,cxp,chipY,258,62,10);ctx.fill();ctx.strokeStyle="#28313F";ctx.lineWidth=1;roundRect(ctx,cxp,chipY,258,62,10);ctx.stroke();
+    ctx.beginPath();ctx.arc(cxp+26,chipY+31,7,0,Math.PI*2);ctx.fillStyle=t.color;ctx.fill();
+    ctx.fillStyle="#E7E2D6";ctx.font="700 17px Archivo";ctx.fillText(t.name,cxp+44,chipY+24);
+    ctx.fillStyle="#8A94A2";ctx.font="500 11px 'IBM Plex Mono'";ls("2px");ctx.fillText("THREAT",cxp+44,chipY+44);ls("0px");
+    ctx.fillStyle=t.color;ctx.font="800 30px Archivo";ctx.textAlign="right";ctx.fillText(String(t.sev),cxp+238,chipY+34);ctx.textAlign="left";});
+  ctx.fillStyle="#8A94A2";ctx.font="500 14px 'IBM Plex Mono'";ls("3px");ctx.fillText("TESTED IN THE CRUCIBLE",64,H-52);
+  ctx.fillStyle="#5b636e";ctx.font="400 13px 'IBM Plex Mono'";ls("1px");ctx.fillText("adversarial decision testing",64,H-32);ls("0px");
+}
+function openCard(verdict,strikes){
+  const vm=verdictMeta(verdict.verdict);
+  const top=strikes.filter(s=>s.state!=="failed").sort((a,b)=>b.severity-a.severity).slice(0,2)
+    .map(s=>({name:s.name.replace("The ",""),sev:s.severity,color:heatColor(s.severity)}));
+  const caption=`Ran a decision through the CRUCIBLE. Verdict: ${verdict.verdict} \u2014 ${verdict.integrity}/100 integrity.`+
+    (top[0]?` Deadliest angle: ${top[0].name} (threat ${top[0].sev}).`:"")+` Stress-test yours before you build it.`;
+  const modal=el(`<div class="modal"><div class="mcard" style="max-width:680px"><h2>Your verdict, ready to post</h2>
+    <p>Your score is the ad. Drop it wherever founders argue about ideas.</p>
+    <canvas id="cardc" style="width:100%;height:auto;border:1px solid var(--line);border-radius:10px;margin:14px 0;display:block"></canvas>
+    <div style="display:flex;gap:12px;align-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:13px;margin-bottom:12px">
+      <div style="flex:1;font-size:13px;color:#cfd4db;line-height:1.5" id="cap"></div>
+      <button class="acctbtn" id="copycap" style="margin:0;white-space:nowrap;width:auto">Copy caption</button></div>
+    <div style="display:flex;gap:12px"><button class="runbtn" id="dl" style="margin-top:0;flex:1;padding:12px">Download PNG<small>1200 \u00d7 675 \u00b7 social ready</small></button>
+      <button class="mclose">Close</button></div></div></div>`);
+  modal.querySelector("#cap").textContent=caption;
+  modal.addEventListener("click",e=>{if(e.target===modal)modal.remove();});
+  modal.querySelector(".mclose").onclick=()=>modal.remove();
+  document.body.appendChild(modal);
+  const canvas=modal.querySelector("#cardc");
+  drawCard(canvas,{integrity:verdict.integrity,gaugeColor:integrityColor(verdict.integrity),verdict:verdict.verdict,verdictColor:vm.c,verdictLine:verdict.verdict_line,top});
+  modal.querySelector("#dl").onclick=()=>canvas.toBlob(b=>{if(!b)return;const url=URL.createObjectURL(b);const a=document.createElement("a");a.href=url;a.download="crucible-verdict.png";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);},"image/png");
+  modal.querySelector("#copycap").onclick=async(e)=>{try{await navigator.clipboard.writeText(caption);e.target.textContent="Copied \u2713";}catch{e.target.textContent="Copy failed";}};
+}
+
+/* ---------- boot ---------- */
+(async function(){
+  try{state.config=await api("/api/config");}catch{}
+  const params=new URLSearchParams(location.search);
+  if(params.get("upgraded"))state.info="Welcome to Pro \u2014 unlimited runs, no ads.";
+  if(params.get("verify")==="ok")state.info="Email confirmed.";
+  try{const r=await api("/api/me");state.user=r.user;}catch{}
+  render();
+})();
+</script>
+</body>
+</html>
