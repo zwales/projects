@@ -173,6 +173,14 @@ async function makePostgres() {
   types.setTypeParser(1114, (v) => v);                               // timestamp -> raw string
   types.setTypeParser(1184, (v) => v);                               // timestamptz -> raw string
 
+  // NOT VERIFIED: no explicit `ssl` option here. Most hosted Postgres (Render,
+  // Supabase, Railway, etc.) requires SSL, and whether `pg` negotiates it
+  // correctly depends on `sslmode` in DATABASE_URL and the provider's cert
+  // chain — this was only tested against a local, trust-auth Postgres in a
+  // sandbox, which exercises none of that. Confirm a real signup works
+  // against the actual deployed DATABASE_URL before relying on this in
+  // production; if it fails on cert validation, add
+  // `ssl: { rejectUnauthorized: false }` (or the provider's documented value).
   const pool = new Pool({ connectionString: config.databaseUrl });
 
   const rows = async (text, params) => (await pool.query(text, params)).rows;
