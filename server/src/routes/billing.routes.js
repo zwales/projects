@@ -9,24 +9,24 @@ const PRICES = { pro: config.stripe.pricePro, team: config.stripe.priceTeam };
 export const billingEnabled = !!stripe;
 
 // Raw-body webhook (mounted before express.json in index.js).
-export function webhookHandler(req, res) {
+export async function webhookHandler(req, res) {
   if (!stripe || !config.stripe.webhookSecret) return res.status(503).end();
   let event;
   try { event = stripe.webhooks.constructEvent(req.body, req.headers["stripe-signature"], config.stripe.webhookSecret); }
   catch (err) { return res.status(400).send(`Webhook signature failed: ${err.message}`); }
-  if (Events.seen.get(event.id)) return res.json({ received: true, duplicate: true });
+  if (await Events.seen.get(event.id)) return res.json({ received: true, duplicate: true });
   try {
     if (event.type === "checkout.session.completed") {
       const s = event.data.object;
       const plan = s.metadata?.plan === "team" ? "team" : "pro";
       if (s.client_reference_id) {
-        Users.setCustomer.run(s.customer, Number(s.client_reference_id));
-        Users.setPlan.run(plan, Number(s.client_reference_id));
+        await Users.setCustomer.run(s.customer, Number(s.client_reference_id));
+        await Users.setPlan.run(plan, Number(s.client_reference_id));
       }
     } else if (event.type === "customer.subscription.deleted") {
-      Users.setPlanByCustomer.run("free", event.data.object.customer);
+      await Users.setPlanByCustomer.run("free", event.data.object.customer);
     }
-    Events.mark.run(event.id);
+    await Events.mark.run(event.id);
   } catch (e) { console.error("webhook handler error", e); return res.status(500).end(); }
   res.json({ received: true });
 }

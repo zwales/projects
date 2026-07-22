@@ -12,6 +12,7 @@ export const config = {
   prod: process.env.NODE_ENV === "production",
   jwtSecret: process.env.JWT_SECRET || "dev-insecure-secret-change-me",
   dbPath: process.env.DB_PATH || "./crucible.db",
+  databaseUrl: process.env.DATABASE_URL || "",
   freeRunLimit: num(process.env.FREE_RUN_LIMIT, 2),
   requireVerify: bool(process.env.REQUIRE_EMAIL_VERIFICATION, false),
   redisUrl: process.env.REDIS_URL || "",
