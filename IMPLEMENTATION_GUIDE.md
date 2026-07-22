@@ -240,8 +240,8 @@ Do this only after your site is live with the Privacy and Terms pages (they are,
    - `ADS_REQUIRE_CONSENT=true`
    Save. Free users now see one ad on the results screen; Pro users never do.
 5. **If ads don't show and the browser console mentions CSP**, some ad code needs inline scripts.
-   Set `CSP_ALLOW_INLINE=true` and redeploy. (This slightly relaxes the script policy; it's the
-   documented trade-off for ad compatibility.)
+   Set `CSP_ALLOW_INLINE=true` and redeploy. This is the documented security trade-off for ad
+   compatibility — see **9.5** below for exactly what we observed and why this flag exists.
 
 ### 9.3 Cost controls (already on — how to tune)
 - Free users run on the cheaper model (`ANTHROPIC_MODEL_FREE`, default Haiku). Paid users get the
@@ -256,6 +256,47 @@ Do this only after your site is live with the Privacy and Terms pages (they are,
   the data layer (`src/lib/db.js`) to Postgres (the `pg` library). This is a code change, not a config
   toggle — ask a developer (or me) to port `db.js`; the rest of the app is written to not care which
   database is underneath.
+
+### 9.5 CSP and ad script compatibility (the `CSP_ALLOW_INLINE` trade-off)
+By default the app ships a **strict Content-Security-Policy**: `script-src` trusts only `'self'`, a
+fresh **per-request nonce**, and the ad hosts (`*.googlesyndication.com`, `*.google.com`,
+`*.doubleclick.net`, `*.media.net`). It does **not** include `'unsafe-inline'`. The server injects the
+nonce into the app's own inline `<script>` as it serves each page (`sendView()` in
+`middleware/security.js`), so the app's first-party code — including the Google Consent Mode v2 setup —
+runs fine under this strict policy.
+
+**What we tested and observed (Playwright + Chromium, real flow: sign up → mocked run → results →
+consent "Allow", with a `securitypolicyviolation` listener capturing every violation):**
+
+- Under the strict default (`CSP_ALLOW_INLINE=false`), the whole first-party flow produced **zero CSP
+  violations**. The app also successfully injects the AdSense loader
+  `<script src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js">` and the browser
+  attempts to fetch it — **CSP does not block that loader tag**, because its host is allow-listed in
+  `script-src`. So loading Google's script is fine; the question is what that script does next.
+- AdSense renders real ad creatives by having `adsbygoogle.js` **dynamically inject further inline
+  `<script>` elements client-side at runtime**. Those injected inline scripts are created by Google's
+  code, not served through `sendView()`, so **they never carry the server's nonce**. We reproduced this
+  exact case against the app's real CSP headers: a client-injected inline `<script>` (no nonce) is
+  **blocked under the strict default** — a `securitypolicyviolation` fires with `blockedURI: "inline"`,
+  `violatedDirective: "script-src-elem"` — while under `CSP_ALLOW_INLINE=true` the identical inline
+  script runs with **no violation**. (Note: this CSP does not set `'strict-dynamic'`, which would let a
+  nonced loader vouch for the scripts it injects; and `eval`/`new Function` were observed to still run
+  under both modes, since the policy sets no `'unsafe-eval'` restriction either way.)
+- **Sandbox limitation — read this before trusting a "no ad" result:** in our test environment,
+  outbound network to Google's ad servers is blocked (the loader request failed at the network layer,
+  not at CSP), so Google's real `adsbygoogle.js` never executed and **no real ad creative could be
+  observed rendering under either policy**. We could not, and do not claim to have, proven an ad fully
+  renders end-to-end here. What we *did* prove is the CSP mechanism: the strict nonce policy blocks the
+  kind of runtime-injected inline scripts AdSense relies on, and `CSP_ALLOW_INLINE=true` unblocks them.
+
+**What this means for you:** keep the strict default (it's the safer policy). If, on your live site
+with an approved `ca-pub-...` account, ads render blank **and** the browser console shows CSP
+violations on inline scripts, set `CSP_ALLOW_INLINE=true` and redeploy. That switch replaces the
+per-request nonce with `'unsafe-inline'` for **all** scripts on the page — a real reduction in your XSS
+defenses, applied site-wide, in exchange for ad compatibility. It is the intended, documented escape
+hatch; do not weaken the default policy in code instead. To confirm the end-to-end behavior on your
+deployment, open the results screen as a free user, accept consent, and watch the browser console /
+Network tab for CSP violations from `googlesyndication`/`doubleclick` inline scripts.
 
 ---
 
@@ -292,5 +333,3 @@ These are the things software cannot finish for you:
 
 You now have a running, secure, monetizable app. Work the checkpoints in order, and don't enable ads
 or take live payments until Phase 10 is genuinely done.
-EOF
-echo "IMPLEMENTATION_GUIDE.md written ($(wc -l < IMPLEMENTATION_GUIDE.md) lines)"
