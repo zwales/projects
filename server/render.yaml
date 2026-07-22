@@ -1,0 +1,38 @@
+# Render blueprint. Deploy: push to a repo, then "New > Blueprint" and point at this file.
+services:
+  - type: web
+    name: crucible
+    runtime: node
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/config
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DB_PATH
+        value: /data/crucible.db
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ANTHROPIC_API_KEY
+        sync: false          # set in the dashboard (secret)
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_PRICE_PRO
+        sync: false
+      - key: STRIPE_PRICE_TEAM
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: APP_URL
+        sync: false          # set to your real https domain
+      - key: ADMIN_EMAILS
+        sync: false
+      - key: REDIS_URL
+        sync: false
+    disk:
+      name: crucible-data
+      mountPath: /data       # persists the SQLite DB across deploys
+      sizeGB: 1

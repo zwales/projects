@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Crucible — admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root{--ink:#0E1219;--panel:#161C26;--line:#28313F;--bone:#E7E2D6;--dim:#8A94A2;--steel:#6E8CA8;--orange:#E27636;}
+  *{box-sizing:border-box;margin:0;padding:0;} body{background:#0E1219;color:var(--bone);font-family:'IBM Plex Sans',system-ui,sans-serif;}
+  .wrap{max-width:900px;margin:0 auto;padding:32px 24px 80px;} h1{font-family:'Archivo';font-weight:800;font-size:26px;letter-spacing:.02em;}
+  .sub{color:var(--dim);font-size:13px;margin-bottom:24px;} .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;}
+  @media(max-width:700px){.cards{grid-template-columns:repeat(2,1fr);}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;}
+  .card .k{font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);}
+  .card .v{font-family:'Archivo';font-weight:800;font-size:28px;margin-top:6px;}
+  h2{font-family:'Archivo';font-weight:700;font-size:16px;margin:22px 0 10px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;} th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);}
+  th{font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);}
+  .mono{font-family:'IBM Plex Mono';} .err{color:#F0A88E;background:rgba(216,70,46,.1);border:1px solid rgba(216,70,46,.35);padding:12px;border-radius:8px;}
+  a{color:var(--steel);text-decoration:none;font-size:13px;}
+</style></head>
+<body><div class="wrap">
+  <a href="/app">&larr; Back to app</a>
+  <h1 style="margin-top:12px">Cost &amp; usage</h1>
+  <div class="sub">Admin only. Figures for the current month unless noted.</div>
+  <div id="body">Loading…</div>
+</div>
+<script>
+const money=(n)=>"$"+(Number(n||0)).toFixed(2);
+const num=(n)=>Number(n||0).toLocaleString();
+async function load(){
+  const body=document.getElementById("body");
+  try{
+    const res=await fetch("/api/admin/stats",{credentials:"include"});
+    if(res.status===401){body.innerHTML='<div class="err">Sign in to the app first, then reload this page.</div>';return;}
+    if(res.status===403){body.innerHTML='<div class="err">Your account is not in ADMIN_EMAILS.</div>';return;}
+    const s=await res.json();
+    const plans=Object.fromEntries((s.byPlan||[]).map(p=>[p.plan,p.n]));
+    body.innerHTML=`
+      <div class="cards">
+        <div class="card"><div class="k">Users</div><div class="v">${num(s.users)}</div></div>
+        <div class="card"><div class="k">Runs (all time)</div><div class="v">${num(s.runsAllTime.runs)}</div></div>
+        <div class="card"><div class="k">Cost this month</div><div class="v">${money(s.thisMonth.cost)}</div></div>
+        <div class="card"><div class="k">Tokens this month</div><div class="v">${num(s.thisMonth.tokens)}</div></div>
+      </div>
+      <h2>Plans</h2>
+      <table><tr><th>Free</th><th>Pro</th><th>Team</th></tr>
+        <tr><td>${num(plans.free||0)}</td><td>${num(plans.pro||0)}</td><td>${num(plans.team||0)}</td></tr></table>
+      <h2>Top users by cost (${s.thisMonth.ym})</h2>
+      <table><tr><th>Email</th><th>Plan</th><th>Tokens</th><th>Cost</th></tr>
+        ${(s.topUsers||[]).map(u=>`<tr><td class="mono">${u.email}</td><td>${u.plan}</td><td>${num(u.tokens)}</td><td>${money(u.cost)}</td></tr>`).join("")||'<tr><td colspan="4" style="color:var(--dim)">No usage yet.</td></tr>'}
+      </table>
+      <div class="sub" style="margin-top:20px">All-time inference cost: <b>${money(s.runsAllTime.cost)}</b></div>`;
+  }catch(e){body.innerHTML='<div class="err">'+e.message+'</div>';}
+}
+load();
+</script>
+</body></html>

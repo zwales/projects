@@ -1,0 +1,8 @@
+# ads.txt — authorized digital sellers (IAB standard).
+# REQUIRED by most ad networks to verify you own this inventory and to block spoofed selling.
+# Replace the line below with the exact line your ad network gives you after you sign up.
+#
+# Google AdSense example (use YOUR publisher ID, no "ca-" prefix here):
+# google.com, pub-0000000000000000, DIRECT, f08c47fec0942fa0
+#
+# Media.net and others will provide their own line(s). Add each on its own line.
